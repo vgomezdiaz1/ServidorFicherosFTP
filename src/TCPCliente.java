@@ -22,12 +22,12 @@ public class TCPCliente {
         PrintWriter fsalida = null;
         ObjectInputStream reciboDelServidor = null;
         BufferedReader in = null;
+        String cadena = "";
         try {
             cliente = new Socket(Host, Puerto);
             fsalida = new PrintWriter(cliente.getOutputStream(), true);
             reciboDelServidor = new ObjectInputStream(cliente.getInputStream());
             in = new BufferedReader(new InputStreamReader(System.in));
-            String cadena;
             do {
                 System.out.print("Introduce el nombre del fichero: ");
                 cadena = in.readLine();
@@ -36,7 +36,12 @@ public class TCPCliente {
                 if (fe.getCodigo() == 200) {
                     System.out.println(fe.getDirectorio() + "/" + fe.getNombre() + "\t(" + fe.getLongitudFichero() + ")");
                     byte[] resumenFicheroRecibido = fe.getContenidoFichero();
-                    byte[] ficheroDescifrado = descifrarBites(resumenFicheroRecibido);
+                    byte[] ficheroDescifrado  = null;
+                    try {
+                        ficheroDescifrado = descifrarBites(resumenFicheroRecibido);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }       
                     String claveFinal = obtenerHash(ficheroDescifrado);
                     if (claveFinal.equals(fe.getFirmaFichero())) {
                         System.out.println("Fichero correctamente recibido");
@@ -54,10 +59,11 @@ public class TCPCliente {
                     System.out.println("Se ha producido un error");
                 }
             } while (!cadena.trim().equals("*"));
-
         } catch (Exception e) {
-            System.out.println("Se ha producido un error");
-            System.out.println(e.getMessage());
+            if (!cadena.equals("*")) {
+                System.out.println("Se ha producido un error");
+                System.out.println(e.getMessage());
+            }
         } finally {
             try {
                 fsalida.close();
@@ -67,7 +73,7 @@ public class TCPCliente {
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-            System.out.println("Fin del envío... ");
+            System.out.println("Fin de la conexión... ");
         }
     }
 
@@ -96,25 +102,11 @@ public class TCPCliente {
         return null;
     }
 
-    public static byte[] descifrarBites(byte[] bitesCifrados) {
+    public static byte[] descifrarBites(byte[] bitesCifrados) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
         byte[] fichBytesDescifrados = null;
-        try {
-            Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");
-            c.init(Cipher.DECRYPT_MODE, keyObj.getClave());
-            fichBytesDescifrados = c.doFinal(bitesCifrados);
-        } catch (InvalidKeyException ex) {
-            System.out.println("Clave no valida");
-        } catch (IllegalBlockSizeException ex) {
-            System.out.println(ex.getMessage());
-        } catch (BadPaddingException ex) {
-            System.out.println(ex.getMessage());
-        } catch (NoSuchAlgorithmException ex) {
-            System.out.println(ex.getMessage());
-        } catch (NoSuchPaddingException ex) {
-            System.out.println(ex.getMessage());
-        } catch (java.lang.IllegalArgumentException ex) {
-
-        }
+        Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");
+        c.init(Cipher.DECRYPT_MODE, keyObj.getClave());
+        fichBytesDescifrados = c.doFinal(bitesCifrados);
         return fichBytesDescifrados;
     }
 

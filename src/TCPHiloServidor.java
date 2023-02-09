@@ -13,74 +13,72 @@ public class TCPHiloServidor extends Thread {
     String directorio = null;
     static GenerarClave keyObj;
 
-    public TCPHiloServidor(Socket socket, String directorio, GenerarClave keyObj) throws IOException {// CONSTRUCTOR
+    public TCPHiloServidor(Socket socket, String directorio, GenerarClave keyObj) throws IOException {
         this.socket = socket;
         this.directorio = directorio;
         this.keyObj = keyObj;
-        // se crean flujos de entrada y salida
         reciboDesdeElCliente = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         envioAlCliente = new ObjectOutputStream(socket.getOutputStream());
     }
 
-    public void run() {// tarea a realizar con el cliente
+    public void run() {
         String nombreFichero = "";
-
         System.out.println("COMUNICO CON: " + socket.toString());
-        while (!nombreFichero.trim().equals("*")) {
-            try {
+        try {
+            while (!nombreFichero.trim().equals("*")) {
                 nombreFichero = reciboDesdeElCliente.readLine();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } // obtener cadena
-            //System.out.println(cadena);
-            if (!nombreFichero.trim().equals("*")) {
-                File fichero = null;
-                FileInputStream ficheroIn = null;
-                try {
-                    System.out.println("Seleccione el fichero: " + directorio + "/" + nombreFichero);
-                    fichero = new File(directorio, nombreFichero);
-                    ficheroIn = new FileInputStream(fichero);
-                    long bytes = fichero.length();
-                    byte[] buff = new byte[(int) bytes];
-                    int i, j = 0;
-                    System.out.println("Lo recorro y lo meto en un buffer");
-                    while ((i = ficheroIn.read()) != -1) {
-                        buff[j] = (byte) i;
-                        j++;
-                    }
-                    System.out.println("Genero el objeto");
-                    String clave = obtenerHash(buff);
-                    byte[] bitesCifrados = cifrarFichero(buff);
-                    FicheroEnvio fe = new FicheroEnvio(200, bitesCifrados, nombreFichero, directorio, bytes, clave);
-                    envioAlCliente.writeObject(fe);
-                } catch (Exception e) {
-                    FicheroEnvio fe = new FicheroEnvio(404, null, nombreFichero, directorio, 0, null);
+                if (!nombreFichero.trim().equals("*")) {
+                    File fichero = null;
+                    FileInputStream ficheroIn = null;
                     try {
+                        System.out.println("Seleccione el fichero: " + directorio + "/" + nombreFichero);
+                        fichero = new File(directorio, nombreFichero);
+                        ficheroIn = new FileInputStream(fichero);
+                        long bytes = fichero.length();
+                        byte[] buff = new byte[(int) bytes];
+                        int i, j = 0;
+                        while ((i = ficheroIn.read()) != -1) {
+                            buff[j] = (byte) i;
+                            j++;
+                        }
+                        String clave = obtenerHash(buff);
+                        //buff[1] = 1;
+                        byte[] bitesCifrados = null;
+                        try {
+                            bitesCifrados = cifrarFichero(buff);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        FicheroEnvio fe = new FicheroEnvio(200, bitesCifrados, nombreFichero, directorio, bytes, clave);
                         envioAlCliente.writeObject(fe);
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
-                } finally {
-                    try {
-                        ficheroIn.close();
                     } catch (Exception e) {
+                        FicheroEnvio fe = new FicheroEnvio(404, null, nombreFichero, directorio, 0, null);
+                        try {
+                            envioAlCliente.writeObject(fe);
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+                    } finally {
+                        try {
+                            ficheroIn.close();
+                        } catch (Exception e) {
+                        }
                     }
                 }
             }
+        } catch (IOException e) {
+            System.out.println("Cliente cerrado abruptamente");
+        } finally {
+            try {
+                reciboDesdeElCliente.close();
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-
         System.out.println("FIN CON: " + socket.toString());
-        try {
-            reciboDesdeElCliente.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
-            socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
+
     public static String obtenerHash(byte[] bitesFichero) {
         try {
             MessageDigest md;
@@ -103,30 +101,14 @@ public class TCPHiloServidor extends Thread {
             }
             hex += h;
         }
-
         return hex.toUpperCase();
     }
 
-    public static byte[] cifrarFichero(byte[] arrayBites) {
+    public static byte[] cifrarFichero(byte[] arrayBites) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
         byte[] fichBytesCifrados = null;
-        try {
-            Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");
-            c.init(Cipher.ENCRYPT_MODE, keyObj.getClave());
-            fichBytesCifrados = c.doFinal(arrayBites);
-        } catch (InvalidKeyException ex) {
-            System.out.println("Clave no valida");
-        } catch (IllegalBlockSizeException ex) {
-            System.out.println(ex.getMessage());
-        } catch (BadPaddingException ex) {
-            System.out.println(ex.getMessage());
-        } catch (NoSuchAlgorithmException ex) {
-            System.out.println(ex.getMessage());
-        } catch (NoSuchPaddingException ex) {
-            System.out.println(ex.getMessage());
-        } catch (java.lang.IllegalArgumentException ex) {
-
-        }
+        Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");
+        c.init(Cipher.ENCRYPT_MODE, keyObj.getClave());
+        fichBytesCifrados = c.doFinal(arrayBites);
         return fichBytesCifrados;
-
     }
 }
