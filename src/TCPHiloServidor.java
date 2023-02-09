@@ -42,6 +42,7 @@ public class TCPHiloServidor extends Thread {
                             j++;
                         }
                         String clave = obtenerHash(buff);
+                        //clave = clave + "1";
                         //buff[1] = 1;
                         byte[] bitesCifrados = null;
                         try {
