@@ -1,13 +1,8 @@
 
 import java.io.*;
 import java.net.*;
-import java.security.InvalidKeyException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
+import java.security.*;
+import javax.crypto.*;
 
 public class TCPHiloServidor extends Thread {
 
@@ -16,10 +11,12 @@ public class TCPHiloServidor extends Thread {
     PrintWriter fsalida;
     Socket socket = null;
     String directorio = null;
+    static GenerarClave keyObj;
 
-    public TCPHiloServidor(Socket socket, String directorio) throws IOException {// CONSTRUCTOR
+    public TCPHiloServidor(Socket socket, String directorio, GenerarClave keyObj) throws IOException {// CONSTRUCTOR
         this.socket = socket;
         this.directorio = directorio;
+        this.keyObj = keyObj;
         // se crean flujos de entrada y salida
         reciboDesdeElCliente = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         envioAlCliente = new ObjectOutputStream(socket.getOutputStream());
@@ -51,32 +48,30 @@ public class TCPHiloServidor extends Thread {
                         buff[j] = (byte) i;
                         j++;
                     }
-
                     System.out.println("Genero el objeto");
-
                     MessageDigest md;
                     md = MessageDigest.getInstance("SHA-1");
                     md.update(buff);
                     byte[] resumen = md.digest();
                     String clave = Hexadecimal(resumen);
                     byte[] bitesCifrados = cifrarFichero(buff);
-                    FicheroEnvio fe = new FicheroEnvio(bitesCifrados, nombreFichero, directorio, bytes, clave);
+                    FicheroEnvio fe = new FicheroEnvio(200, bitesCifrados, nombreFichero, directorio, bytes, clave);
                     envioAlCliente.writeObject(fe);
                 } catch (Exception e) {
-                    System.out.println("Se ha producido un error");
-                    System.out.println(e.getMessage());
+                    FicheroEnvio fe = new FicheroEnvio(404, null, nombreFichero, directorio, 0, null);
+                    try {
+                        envioAlCliente.writeObject(fe);
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
                 } finally {
                     try {
                         ficheroIn.close();
                     } catch (Exception e) {
-                        System.out.println("Se ha producido un error");
-                        System.out.println(e.getMessage());
                     }
                 }
-
             }
-
-        } // fin while
+        }
 
         System.out.println("FIN CON: " + socket.toString());
         try {
@@ -105,25 +100,11 @@ public class TCPHiloServidor extends Thread {
     }
 
     public static byte[] cifrarFichero(byte[] arrayBites) {
-        
-        File keyFichero = new File("miClave.key");
-        GenerarClave keyObj;
-        ObjectInputStream clave;
         byte[] fichBytesCifrados = null;
-
         try {
-            clave = new ObjectInputStream(new FileInputStream(keyFichero));
-            keyObj = (GenerarClave) clave.readObject();
-
-            // Cifrando byte[] con Cipher.
             Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");
             c.init(Cipher.ENCRYPT_MODE, keyObj.getClave());
             fichBytesCifrados = c.doFinal(arrayBites);
-
-        } catch (IOException ex) {
-            System.out.println("Error I/O");
-        } catch (ClassNotFoundException ex) {
-            System.out.println(ex.getMessage());
         } catch (InvalidKeyException ex) {
             System.out.println("Clave no valida");
         } catch (IllegalBlockSizeException ex) {
