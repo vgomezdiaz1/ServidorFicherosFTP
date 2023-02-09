@@ -49,11 +49,7 @@ public class TCPHiloServidor extends Thread {
                         j++;
                     }
                     System.out.println("Genero el objeto");
-                    MessageDigest md;
-                    md = MessageDigest.getInstance("SHA-1");
-                    md.update(buff);
-                    byte[] resumen = md.digest();
-                    String clave = Hexadecimal(resumen);
+                    String clave = obtenerHash(buff);
                     byte[] bitesCifrados = cifrarFichero(buff);
                     FicheroEnvio fe = new FicheroEnvio(200, bitesCifrados, nombreFichero, directorio, bytes, clave);
                     envioAlCliente.writeObject(fe);
@@ -84,6 +80,18 @@ public class TCPHiloServidor extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+    public static String obtenerHash(byte[] bitesFichero) {
+        try {
+            MessageDigest md;
+            md = MessageDigest.getInstance("SHA-1");
+            md.update(bitesFichero);
+            byte[] resumen = md.digest();
+            return Hexadecimal(resumen);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public static String Hexadecimal(byte[] resumen) {
