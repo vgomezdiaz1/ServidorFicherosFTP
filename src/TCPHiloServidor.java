@@ -10,12 +10,10 @@ public class TCPHiloServidor extends Thread {
     ObjectOutputStream envioAlCliente;
     PrintWriter fsalida;
     Socket socket = null;
-    String directorio = null;
     static GenerarClave keyObj;
 
-    public TCPHiloServidor(Socket socket, String directorio, GenerarClave keyObj) throws IOException {
+    public TCPHiloServidor(Socket socket, GenerarClave keyObj) throws IOException {
         this.socket = socket;
-        this.directorio = directorio;
         this.keyObj = keyObj;
         reciboDesdeElCliente = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         envioAlCliente = new ObjectOutputStream(socket.getOutputStream());
@@ -31,8 +29,8 @@ public class TCPHiloServidor extends Thread {
                     File fichero = null;
                     FileInputStream ficheroIn = null;
                     try {
-                        System.out.println("Seleccione el fichero: " + directorio + "/" + nombreFichero);
-                        fichero = new File(directorio, nombreFichero);
+                        System.out.println("Seleccione el fichero: " + nombreFichero);
+                        fichero = new File(nombreFichero);
                         ficheroIn = new FileInputStream(fichero);
                         long bytes = fichero.length();
                         byte[] buff = new byte[(int) bytes];
@@ -50,10 +48,10 @@ public class TCPHiloServidor extends Thread {
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
-                        FicheroEnvio fe = new FicheroEnvio(200, bitesCifrados, nombreFichero, directorio, bytes, clave);
+                        FicheroEnvio fe = new FicheroEnvio(200, bitesCifrados, fichero.getName(), bytes, clave);
                         envioAlCliente.writeObject(fe);
                     } catch (Exception e) {
-                        FicheroEnvio fe = new FicheroEnvio(404, null, nombreFichero, directorio, 0, null);
+                        FicheroEnvio fe = new FicheroEnvio(404, null, nombreFichero, 0, null);
                         try {
                             envioAlCliente.writeObject(fe);
                         } catch (IOException ex) {

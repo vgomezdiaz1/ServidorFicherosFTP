@@ -34,21 +34,21 @@ public class TCPCliente {
                 fsalida.println(cadena);
                 FicheroEnvio fe = (FicheroEnvio) reciboDelServidor.readObject();
                 if (fe.getCodigo() == 200) {
-                    System.out.println(fe.getDirectorio() + "/" + fe.getNombre() + "\t(" + fe.getLongitudFichero() + ")");
+                    System.out.println(fe.getNombre() + "\t(" + fe.getLongitudFichero() + ")");
                     byte[] resumenFicheroRecibido = fe.getContenidoFichero();
-                    byte[] ficheroDescifrado  = null;
+                    byte[] ficheroDescifrado = null;
                     try {
                         ficheroDescifrado = descifrarBites(resumenFicheroRecibido);
                     } catch (Exception e) {
                         e.printStackTrace();
-                    }       
+                    }
                     String claveFinal = obtenerHash(ficheroDescifrado);
                     if (claveFinal.equals(fe.getFirmaFichero())) {
-                        System.out.println("Fichero correctamente recibido");
-                        System.out.println("Contenido: ");
-                        for (int i = 0; i < fe.getLongitudFichero(); i++) {
-                            System.out.print((char) ficheroDescifrado[i]);
-                        }
+                        System.out.println("Fichero correctamente recibido");        
+                        System.out.println(fe.getNombre());
+                        FileOutputStream fileOuputStream = new FileOutputStream(fe.getNombre());
+                        fileOuputStream.write(ficheroDescifrado);
+                        fileOuputStream.close();
                     } else {
                         System.out.println("Fichero corrupto: firma distinta a la esperada");
                         System.out.println("Contacte con el administrador");

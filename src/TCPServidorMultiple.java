@@ -18,7 +18,7 @@ public class TCPServidorMultiple {
         while (true) {
             Socket cliente = new Socket();
             cliente = servidor.accept();//esperando cliente	
-            TCPHiloServidor hilo = new TCPHiloServidor(cliente, "./src", keyObj);
+            TCPHiloServidor hilo = new TCPHiloServidor(cliente, keyObj);
             hilo.start();
         }
     }
